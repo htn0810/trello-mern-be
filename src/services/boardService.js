@@ -2,6 +2,8 @@
 import { StatusCodes } from "http-status-codes";
 import { cloneDeep } from "lodash";
 import { boardModel } from "~/models/boardModel";
+import { cardModel } from "~/models/cardModel";
+import { columnModel } from "~/models/columnModel";
 import ApiError from "~/utils/ApiError";
 import { slugify } from "~/utils/formatters";
 
@@ -42,7 +44,52 @@ const getDetailsBoard = async (boardId) => {
   }
 };
 
+const update = async (boardId, reqBody) => {
+  try {
+    const updateData = {
+      ...reqBody,
+      updatedAt: Date.now(),
+    };
+
+    const updatedBoard = await boardModel.update(boardId, updateData);
+    return updatedBoard;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const moveCardToDifferentColumns = async (reqBody) => {
+  try {
+    const {
+      currentCardId,
+      prevColumnId,
+      prevCardOrderIds,
+      nextColumnId,
+      nextCardOrderIds,
+    } = reqBody;
+
+    await columnModel.update(prevColumnId, {
+      cardOrderIds: prevCardOrderIds,
+      updatedAt: Date.now(),
+    });
+
+    await columnModel.update(nextColumnId, {
+      cardOrderIds: nextCardOrderIds,
+      updatedAt: Date.now(),
+    });
+
+    await cardModel.update(currentCardId, { columnId: nextColumnId });
+    return {
+      updateResult: "Successfully!",
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const boardService = {
   createNewBoard,
   getDetailsBoard,
+  update,
+  moveCardToDifferentColumns,
 };

@@ -1,5 +1,5 @@
 import Joi from "joi";
-import { ObjectId } from "mongodb";
+import { ObjectId, ReturnDocument } from "mongodb";
 import { GET_DB } from "~/config/mongodb";
 import { cardModel } from "~/models/cardModel";
 import { columnModel } from "~/models/columnModel";
@@ -20,6 +20,8 @@ const BOARD_COLLECTION_SCHEMA = Joi.object({
   updatedAt: Joi.date().timestamp("javascript").default(null),
   _destroy: Joi.boolean().default(false),
 });
+
+const INVALID_UPDATE_FIELDS = ["_id", "createdAt"];
 
 const validateBeforeCreate = async (data) => {
   return await BOARD_COLLECTION_SCHEMA.validateAsync(data, {
@@ -80,7 +82,63 @@ const getDetailsBoard = async (id) => {
         },
       ])
       .toArray();
-    return result[0] || {};
+    return result[0] || null;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const pushColumnOrderIds = async (column) => {
+  try {
+    const result = await GET_DB()
+      .collection(BOARD_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(String(column.boardId)) },
+        { $push: { columnOrderIds: new ObjectId(String(column._id)) } },
+        { returnDocument: "after" }
+      );
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const update = async (boardId, updateData) => {
+  try {
+    // filter data (exclude field which we don't want update)
+    Object.keys(updateData).forEach((fieldName) => {
+      if (INVALID_UPDATE_FIELDS.includes(fieldName)) {
+        delete updateData[fieldName];
+      }
+    });
+
+    if (updateData.columnOrderIds) {
+      updateData.columnOrderIds = updateData.columnOrderIds.map(
+        (_id) => new ObjectId(String(_id))
+      );
+    }
+    const result = await GET_DB()
+      .collection(BOARD_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(String(boardId)) },
+        { $set: updateData },
+        { returnDocument: "after" }
+      );
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const removeColumnIdInColumnOrderIds = async (boardId, columnId) => {
+  try {
+    await GET_DB()
+      .collection(BOARD_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(String(boardId)) },
+        { $pull: { columnOrderIds: new ObjectId(String(columnId)) } },
+        { returnDocument: "after" }
+      );
   } catch (error) {
     throw new Error(error);
   }
@@ -92,4 +150,7 @@ export const boardModel = {
   createNew,
   findOneById,
   getDetailsBoard,
+  pushColumnOrderIds,
+  update,
+  removeColumnIdInColumnOrderIds,
 };
