@@ -10,6 +10,17 @@ const createNew = async (req, res, next) => {
   }
 };
 
+const getBoards = async (req, res, next) => {
+  try {
+    const userId = req.jwtDecoded._id;
+    const { page, itemsPerPage } = req.query;
+    const result = await boardService.getBoards(userId, page, itemsPerPage);
+    res.status(StatusCodes.OK).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getDetailsBoard = async (req, res, next) => {
   try {
     const boardId = req.params.id;
@@ -43,4 +54,5 @@ export const boardController = {
   getDetailsBoard,
   update,
   moveCardToDifferentColumns,
+  getBoards,
 };

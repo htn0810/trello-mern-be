@@ -1,5 +1,4 @@
 import express from "express";
-import { StatusCodes } from "http-status-codes";
 import { boardController } from "~/controllers/boardController";
 import { authMiddleware } from "~/middlewares/authMiddleware";
 import { boardValidation } from "~/validations/boardValidation";
@@ -7,9 +6,7 @@ import { boardValidation } from "~/validations/boardValidation";
 const Router = express.Router();
 
 Router.route("/")
-  .get(authMiddleware.isAuthorized, (req, res) => {
-    res.status(StatusCodes.OK).json({ message: "Get ne" });
-  })
+  .get(authMiddleware.isAuthorized, boardController.getBoards)
   .post(
     authMiddleware.isAuthorized,
     boardValidation.createNew,

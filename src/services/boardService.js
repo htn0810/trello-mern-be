@@ -1,10 +1,11 @@
 /* eslint-disable no-useless-catch */
 import { StatusCodes } from "http-status-codes";
-import { cloneDeep } from "lodash";
+import { cloneDeep, result } from "lodash";
 import { boardModel } from "~/models/boardModel";
 import { cardModel } from "~/models/cardModel";
 import { columnModel } from "~/models/columnModel";
 import ApiError from "~/utils/ApiError";
+import { DEFAULT_ITEMS_PER_PAGE, DEFAULT_PAGE } from "~/utils/constants";
 import { slugify } from "~/utils/formatters";
 
 const createNewBoard = async (reqBody) => {
@@ -14,6 +15,21 @@ const createNewBoard = async (reqBody) => {
 
     const getNewBoard = await boardModel.findOneById(createdBoard.insertedId);
     return getNewBoard;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const getBoards = async (userId, page, itemsPerPage) => {
+  try {
+    if (!page) page = DEFAULT_PAGE;
+    if (!itemsPerPage) itemsPerPage = DEFAULT_ITEMS_PER_PAGE;
+    const results = await boardModel.getBoards(
+      userId,
+      parseInt(page, 10),
+      parseInt(itemsPerPage, 10)
+    );
+    return results;
   } catch (error) {
     throw error;
   }
@@ -92,4 +108,5 @@ export const boardService = {
   getDetailsBoard,
   update,
   moveCardToDifferentColumns,
+  getBoards,
 };
