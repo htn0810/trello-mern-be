@@ -3,6 +3,7 @@ import { ObjectId } from "mongodb";
 import { GET_DB } from "~/config/mongodb";
 import { cardModel } from "~/models/cardModel";
 import { columnModel } from "~/models/columnModel";
+import { userModel } from "~/models/userModel";
 import { paginSkipValue } from "~/utils/algorithms";
 import { BOARD_TYPES } from "~/utils/constants";
 import { OBJECT_ID_RULE, OBJECT_ID_RULE_MESSAGE } from "~/utils/validators";
@@ -36,12 +37,16 @@ const validateBeforeCreate = async (data) => {
   });
 };
 
-const createNew = async (data) => {
+const createNew = async (userId, data) => {
   try {
     const validData = await validateBeforeCreate(data);
+    const newBoardToAdd = {
+      ...validData,
+      ownerIds: [new ObjectId(String(userId))],
+    };
     const createdBoard = await GET_DB()
       .collection(BOARD_COLLECTION_NAME)
-      .insertOne(validData);
+      .insertOne(newBoardToAdd);
     return createdBoard;
   } catch (error) {
     throw new Error(error);
@@ -94,7 +99,6 @@ const getBoards = async (userId, page, itemsPerPage) => {
       )
       .toArray();
 
-    console.log("🚀 ~ getBoards ~ query:", query);
     const res = query[0];
     return {
       boards: res.queryBoards || [],
@@ -105,15 +109,26 @@ const getBoards = async (userId, page, itemsPerPage) => {
   }
 };
 
-const getDetailsBoard = async (id) => {
+const getDetailsBoard = async (userId, boardId) => {
   try {
+    const queryConditions = [
+      {
+        _id: new ObjectId(String(boardId)),
+      },
+      { _destroy: false },
+      {
+        $or: [
+          { ownerIds: { $all: [new ObjectId(String(userId))] } },
+          { memberIds: { $all: [new ObjectId(String(userId))] } },
+        ],
+      },
+    ];
     const result = await GET_DB()
       .collection(BOARD_COLLECTION_NAME)
       .aggregate([
         {
           $match: {
-            _id: new ObjectId(String(id)),
-            _destroy: false,
+            $and: queryConditions,
           },
         },
         {
@@ -130,6 +145,24 @@ const getDetailsBoard = async (id) => {
             localField: "_id",
             foreignField: "boardId",
             as: "cards",
+          },
+        },
+        {
+          $lookup: {
+            from: userModel.USER_COLLECTION_NAME,
+            localField: "ownerIds",
+            foreignField: "_id",
+            as: "owners",
+            pipeline: [{ $project: { password: 0, verifyToken: 0 } }],
+          },
+        },
+        {
+          $lookup: {
+            from: userModel.USER_COLLECTION_NAME,
+            localField: "memeberIds",
+            foreignField: "_id",
+            as: "members",
+            pipeline: [{ $project: { password: 0, verifyToken: 0 } }],
           },
         },
       ])

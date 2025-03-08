@@ -3,7 +3,8 @@ import { boardService } from "~/services/boardService";
 
 const createNew = async (req, res, next) => {
   try {
-    const createdBoard = await boardService.createNewBoard(req.body);
+    const userId = req.jwtDecoded._id;
+    const createdBoard = await boardService.createNewBoard(userId, req.body);
     res.status(StatusCodes.OK).json(createdBoard);
   } catch (error) {
     next(error);
@@ -23,8 +24,9 @@ const getBoards = async (req, res, next) => {
 
 const getDetailsBoard = async (req, res, next) => {
   try {
+    const userId = req.jwtDecoded._id;
     const boardId = req.params.id;
-    const detailsBoard = await boardService.getDetailsBoard(boardId);
+    const detailsBoard = await boardService.getDetailsBoard(userId, boardId);
     res.status(StatusCodes.OK).json(detailsBoard);
   } catch (error) {
     next(error);
