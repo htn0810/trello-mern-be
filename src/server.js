@@ -9,6 +9,10 @@ import { APIs_V1 } from "~/routes/v1";
 import cookieParser from "cookie-parser";
 import { corsOptions } from "~/config/cors";
 
+import socketIo from "socket.io";
+import http from "http";
+import { inviteUserToBoardSocket } from "~/sockets/inviteUserToBoardSocket";
+
 const START_SERVER = () => {
   const app = express();
 
@@ -26,7 +30,18 @@ const START_SERVER = () => {
 
   app.use(errorHandlingMiddleware);
 
-  app.listen(env.APP_PORT, env.APP_HOST, () => {
+  // init a server to handle socket io
+  const server = http.createServer(app);
+  // init io with server and corsOptions
+  const io = socketIo(server, { cors: corsOptions });
+
+  // handle socket connection
+  io.on("connection", (socket) => {
+    // listen event FE_USER_INVITED_TO_BOARD from client
+    inviteUserToBoardSocket(socket);
+  });
+
+  server.listen(env.APP_PORT, env.APP_HOST, () => {
     console.log(`Server is running at ${env.APP_HOST}:${env.APP_PORT}/`);
   });
 

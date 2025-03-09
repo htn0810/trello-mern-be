@@ -14,8 +14,14 @@ const createNew = async (req, res, next) => {
 const getBoards = async (req, res, next) => {
   try {
     const userId = req.jwtDecoded._id;
-    const { page, itemsPerPage } = req.query;
-    const result = await boardService.getBoards(userId, page, itemsPerPage);
+    const { page, itemsPerPage, q } = req.query;
+    const queryFilters = q;
+    const result = await boardService.getBoards(
+      userId,
+      page,
+      itemsPerPage,
+      queryFilters
+    );
     res.status(StatusCodes.OK).json(result);
   } catch (error) {
     next(error);

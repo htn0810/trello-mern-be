@@ -65,7 +65,7 @@ const findOneById = async (id) => {
   }
 };
 
-const getBoards = async (userId, page, itemsPerPage) => {
+const getBoards = async (userId, page, itemsPerPage, queryFilters) => {
   try {
     const queryConditions = [
       { _destroy: false },
@@ -76,6 +76,15 @@ const getBoards = async (userId, page, itemsPerPage) => {
         ],
       },
     ];
+
+    // handle query filters
+    if (queryFilters) {
+      Object.keys(queryFilters).forEach((key) => {
+        queryConditions.push({
+          [key]: { $regex: new RegExp(queryFilters[key], "i") },
+        });
+      });
+    }
 
     const query = await GET_DB()
       .collection(BOARD_COLLECTION_NAME)
@@ -159,7 +168,7 @@ const getDetailsBoard = async (userId, boardId) => {
         {
           $lookup: {
             from: userModel.USER_COLLECTION_NAME,
-            localField: "memeberIds",
+            localField: "memberIds",
             foreignField: "_id",
             as: "members",
             pipeline: [{ $project: { password: 0, verifyToken: 0 } }],
@@ -180,6 +189,21 @@ const pushColumnOrderIds = async (column) => {
       .findOneAndUpdate(
         { _id: new ObjectId(String(column.boardId)) },
         { $push: { columnOrderIds: new ObjectId(String(column._id)) } },
+        { returnDocument: "after" }
+      );
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const pushMemberIds = async (userId, boardId) => {
+  try {
+    const result = await GET_DB()
+      .collection(BOARD_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(String(boardId)) },
+        { $push: { memberIds: new ObjectId(String(userId)) } },
         { returnDocument: "after" }
       );
     return result;
@@ -239,4 +263,5 @@ export const boardModel = {
   update,
   removeColumnIdInColumnOrderIds,
   getBoards,
+  pushMemberIds,
 };

@@ -1,6 +1,7 @@
 import Joi from "joi";
 import { ObjectId } from "mongodb";
 import { GET_DB } from "~/config/mongodb";
+import { CARD_MEMBER_ACTIONS } from "~/utils/constants";
 import {
   EMAIL_RULE,
   EMAIL_RULE_MESSAGE,
@@ -24,7 +25,7 @@ const CARD_COLLECTION_SCHEMA = Joi.object({
   description: Joi.string().optional(),
 
   cover: Joi.string().default(null),
-  memeberIds: Joi.array()
+  memberIds: Joi.array()
     .items(Joi.string().pattern(OBJECT_ID_RULE).message(OBJECT_ID_RULE_MESSAGE))
     .default([]),
   comments: Joi.array()
@@ -118,6 +119,46 @@ const removeCardsByColumnId = async (columnId) => {
   }
 };
 
+const unshiftNewComment = async (cardId, commentData) => {
+  try {
+    const result = await GET_DB()
+      .collection(CARD_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(String(cardId)) },
+        { $push: { comments: { $each: [commentData], $position: 0 } } },
+        { returnDocument: "after" }
+      );
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+const updateMembers = async (cardId, inCommingUserInfo) => {
+  try {
+    let updateCondition = {};
+    if (inCommingUserInfo.action === CARD_MEMBER_ACTIONS.ADD) {
+      updateCondition = {
+        $push: { memberIds: new ObjectId(String(inCommingUserInfo.userId)) },
+      };
+    } else {
+      updateCondition = {
+        $pull: { memberIds: new ObjectId(String(inCommingUserInfo.userId)) },
+      };
+    }
+    const result = await GET_DB()
+      .collection(CARD_COLLECTION_NAME)
+      .findOneAndUpdate(
+        { _id: new ObjectId(String(cardId)) },
+        updateCondition,
+        { returnDocument: "after" }
+      );
+    return result;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
 export const cardModel = {
   CARD_COLLECTION_NAME,
   CARD_COLLECTION_SCHEMA,
@@ -125,4 +166,6 @@ export const cardModel = {
   findOneById,
   update,
   removeCardsByColumnId,
+  unshiftNewComment,
+  updateMembers,
 };

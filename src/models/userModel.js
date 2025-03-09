@@ -1,5 +1,4 @@
 const Joi = require("joi");
-const { verify } = require("jsonwebtoken");
 const { ObjectId } = require("mongodb");
 const { GET_DB } = require("~/config/mongodb");
 const { EMAIL_RULE, EMAIL_RULE_MESSAGE } = require("~/utils/validators");
@@ -20,7 +19,7 @@ const USER_COLLECTION_SCHEMA = Joi.object({
   displayName: Joi.string().required().trim().strict(),
   avatar: Joi.string().default(null),
   role: Joi.string()
-    .valid(USER_ROLES.ADMIN, USER_ROLES.CLIENT)
+    .valid(...Object.values(USER_ROLES))
     .default(USER_ROLES.CLIENT),
 
   isActive: Joi.boolean().default(false),
